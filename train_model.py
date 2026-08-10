@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
@@ -95,12 +95,12 @@ preprocessor = ColumnTransformer(
 # 6. MODEL
 # ==========================================
 
-model = RandomForestRegressor(
-    n_estimators=300,
-    random_state=42,
-    n_jobs=-1
+model = HistGradientBoostingRegressor(
+    max_iter=100,
+    learning_rate=0.1,
+    max_leaf_nodes=15,
+    random_state=42
 )
-
 
 # ==========================================
 # 7. PIPELINE
