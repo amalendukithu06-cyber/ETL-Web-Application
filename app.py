@@ -3,255 +3,376 @@ import pandas as pd
 import pickle
 
 
-# ==========================================
-# PAGE CONFIG
-# ==========================================
+# ==================================================
+# PAGE CONFIGURATION
+# ==================================================
 
 st.set_page_config(
     page_title="EV Energy Prediction",
     page_icon="⚡",
-    layout="centered"
+    layout="wide"
 )
 
 
-# ==========================================
+# ==================================================
 # LOAD MODEL
-# ==========================================
+# ==================================================
 
-try:
-
+@st.cache_resource
+def load_model():
     with open("model.pkl", "rb") as file:
+        return pickle.load(file)
 
-        model = pickle.load(file)
 
-except FileNotFoundError:
+model = load_model()
 
-    st.error(
-        "Model file not found. "
-        "Please run train_model.py first."
+
+# ==================================================
+# LOAD DATASET
+# ==================================================
+
+@st.cache_data
+def load_data():
+    return pd.read_csv("EV_Charging_Grid_Load_Dataset_5000.csv")
+
+
+df = load_data()
+
+
+# ==================================================
+# SIDEBAR NAVIGATION
+# ==================================================
+
+st.sidebar.title("⚡ EV Energy System")
+
+page = st.sidebar.radio(
+    "Navigation",
+    [
+        "🏠 Home",
+        "🔮 Prediction",
+        "📊 Visualisation",
+        "ℹ️ About"
+    ]
+)
+
+
+# ==================================================
+# HOME PAGE
+# ==================================================
+
+if page == "🏠 Home":
+
+    st.title("⚡ EV Energy Consumption Prediction")
+
+    st.markdown("""
+    ### Smart EV Charging Analytics
+
+    This application uses **Machine Learning** to predict
+    energy consumption in Electric Vehicle charging stations.
+
+    Enter charging station information and get an
+    estimated energy consumption value.
+    """)
+
+    st.divider()
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Dataset Records",
+            f"{len(df):,}"
+        )
+
+    with col2:
+        st.metric(
+            "Prediction Model",
+            "ML Regression"
+        )
+
+    with col3:
+        st.metric(
+            "Application",
+            "EV Energy Analytics"
+        )
+
+    st.divider()
+
+    st.subheader("🚀 Key Features")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        **🔮 Energy Prediction**
+
+        Predict expected energy consumption
+        using charging station information.
+
+        **📊 Data Visualisation**
+
+        Explore EV charging data using
+        interactive charts.
+        """)
+
+    with col2:
+        st.markdown("""
+        **⚡ Smart Analytics**
+
+        Understand charging and grid-load patterns.
+
+        **🌐 Web Application**
+
+        Simple and user-friendly Streamlit interface.
+        """)
+
+
+# ==================================================
+# PREDICTION PAGE
+# ==================================================
+
+elif page == "🔮 Prediction":
+
+    st.title("🔮 Energy Consumption Prediction")
+
+    st.write(
+        "Enter the charging station details below "
+        "to predict energy consumption."
     )
 
-    st.stop()
+    st.divider()
 
+    col1, col2 = st.columns(2)
 
-# ==========================================
-# TITLE
-# ==========================================
+    with col1:
 
-st.title(
-    "⚡ EV Energy Consumption Prediction"
-)
+        city = st.selectbox(
+            "🏙️ City",
+            sorted(df["City"].dropna().unique())
+        )
 
-st.write(
-    "Enter the EV charging station details "
-    "to predict energy consumption."
-)
+        charger_type = st.selectbox(
+            "🔌 Charger Type",
+            sorted(df["Charger_Type"].dropna().unique())
+        )
 
+        vehicle_type = st.selectbox(
+            "🚗 Vehicle Type",
+            sorted(df["Vehicle_Type"].dropna().unique())
+        )
 
-# ==========================================
-# INPUT SECTION
-# ==========================================
+    with col2:
 
-st.subheader(
-    "🔢 Enter Station Details"
-)
+        grid_load = st.number_input(
+            "⚡ Grid Load (kW)",
+            min_value=0.0,
+            value=float(df["Grid_Load_kW"].median()),
+            step=1.0
+        )
 
+        station_status = st.selectbox(
+            "🔋 Station Status",
+            sorted(df["Station_Status"].dropna().unique())
+        )
 
-# ==========================================
-# CITY
-# ==========================================
+        selected_date = st.date_input(
+            "📅 Date"
+        )
 
-city = st.selectbox(
+    st.divider()
 
-    "🏙️ City",
+    if st.button(
+        "🔮 Predict Energy Consumption",
+        width="stretch"
+    ):
 
-    [
-        "Kochi",
-        "Calicut",
-        "Trivandrum",
-        "Hyderabad",
-        "Delhi",
-        "Chennai",
-        "Bengaluru",
-        "Mumbai"
-    ]
-)
+        date_value = pd.to_datetime(selected_date)
 
+        input_data = pd.DataFrame({
+            "City": [city],
+            "Charger_Type": [charger_type],
+            "Vehicle_Type": [vehicle_type],
+            "Grid_Load_kW": [grid_load],
+            "Station_Status": [station_status],
+            "Year": [date_value.year],
+            "Month": [date_value.month],
+            "Day": [date_value.day],
+            "DayOfYear": [date_value.dayofyear]
+        })
 
-# ==========================================
-# CHARGER TYPE
-# ==========================================
+        prediction = model.predict(input_data)[0]
 
-charger_type = st.selectbox(
+        st.success(
+            "Prediction completed successfully!"
+        )
 
-    "🔌 Charger Type",
+        st.metric(
+            "⚡ Predicted Energy Consumption",
+            f"{prediction:.2f} kWh"
+        )
 
-    [
-        "Fast",
-        "DC Fast",
-        "Level 2",
-        "Slow"
-    ]
-)
 
+# ==================================================
+# VISUALISATION PAGE
+# ==================================================
 
-# ==========================================
-# VEHICLE TYPE
-# ==========================================
+elif page == "📊 Visualisation":
 
-vehicle_type = st.selectbox(
+    st.title("📊 EV Charging Data Visualisation")
 
-    "🚗 Vehicle Type",
-
-    [
-        "Car",
-        "Bus",
-        "Bike"
-    ]
-)
-
-
-# ==========================================
-# GRID LOAD
-# ==========================================
-
-grid_load = st.number_input(
-
-    "⚡ Grid Load (kW)",
-
-    min_value=0.0,
-
-    max_value=1000.0,
-
-    value=300.0,
-
-    step=1.0
-)
-
-
-# ==========================================
-# STATION STATUS
-# ==========================================
-
-station_status = st.selectbox(
-
-    "🔋 Station Status",
-
-    [
-        "Active",
-        "Inactive"
-    ]
-)
-
-
-# ==========================================
-# DATE
-# ==========================================
-
-date = st.date_input(
-
-    "📅 Date"
-)
-
-
-# ==========================================
-# PREDICT BUTTON
-# ==========================================
-
-st.divider()
-
-
-if st.button(
-    "🔮 Predict Energy Consumption",
-    use_container_width=True
-):
-
-    # --------------------------------------
-    # Convert date
-    # --------------------------------------
-
-    date = pd.to_datetime(date)
-
-    year = date.year
-
-    month = date.month
-
-    day = date.day
-
-
-    # --------------------------------------
-    # Create input dataframe
-    # --------------------------------------
-
-    input_data = pd.DataFrame({
-
-        "City": [
-            city
-        ],
-
-        "Charger_Type": [
-            charger_type
-        ],
-
-        "Vehicle_Type": [
-            vehicle_type
-        ],
-
-        "Grid_Load_kW": [
-            grid_load
-        ],
-
-        "Station_Status": [
-            station_status
-        ],
-
-        "Year": [
-            year
-        ],
-
-        "Month": [
-            month
-        ],
-
-        "Day": [
-            day
-        ]
-    })
-
-
-    # --------------------------------------
-    # Prediction
-    # --------------------------------------
-
-    prediction = model.predict(
-        input_data
-    )[0]
-
-
-    # --------------------------------------
-    # Result
-    # --------------------------------------
-
-    st.success(
-        "✅ Prediction Completed!"
+    st.write(
+        "Explore the EV charging dataset and "
+        "understand energy consumption patterns."
     )
 
+    st.divider()
+
+    # ----------------------------------------------
+    # DATASET PREVIEW
+    # ----------------------------------------------
+
+    st.subheader("📋 Dataset Preview")
+
+    st.dataframe(
+        df.head(10),
+        width="stretch"
+    )
+
+    st.divider()
+
+    # ----------------------------------------------
+    # CITY-WISE ENERGY
+    # ----------------------------------------------
 
     st.subheader(
-        "⚡ Predicted Energy Consumption"
+        "🏙️ Average Energy Consumption by City"
+    )
+
+    city_energy = (
+        df.groupby("City")["Energy_Consumed_kWh"]
+        .mean()
+        .sort_values(ascending=False)
+    )
+
+    st.bar_chart(city_energy)
+
+    # ----------------------------------------------
+    # VEHICLE TYPE
+    # ----------------------------------------------
+
+    st.subheader(
+        "🚗 Energy Consumption by Vehicle Type"
+    )
+
+    vehicle_energy = (
+        df.groupby("Vehicle_Type")[
+            "Energy_Consumed_kWh"
+        ]
+        .mean()
+        .sort_values(ascending=False)
+    )
+
+    st.bar_chart(vehicle_energy)
+
+    # ----------------------------------------------
+    # CHARGER TYPE
+    # ----------------------------------------------
+
+    st.subheader(
+        "🔌 Energy Consumption by Charger Type"
+    )
+
+    charger_energy = (
+        df.groupby("Charger_Type")[
+            "Energy_Consumed_kWh"
+        ]
+        .mean()
+        .sort_values(ascending=False)
+    )
+
+    st.bar_chart(charger_energy)
+
+    # ----------------------------------------------
+    # GRID LOAD VS ENERGY
+    # ----------------------------------------------
+
+    st.subheader(
+        "⚡ Grid Load vs Energy Consumption"
+    )
+
+    chart_data = df[
+        [
+            "Grid_Load_kW",
+            "Energy_Consumed_kWh"
+        ]
+    ]
+
+    st.scatter_chart(
+        chart_data,
+        x="Grid_Load_kW",
+        y="Energy_Consumed_kWh"
     )
 
 
-    st.metric(
+# ==================================================
+# ABOUT PAGE
+# ==================================================
 
-        label="Energy Consumption",
+elif page == "ℹ️ About":
 
-        value=f"{prediction:.2f} kWh"
-    )
+    st.title("ℹ️ About This Project")
 
+    st.markdown("""
+    ## ⚡ EV Energy Consumption Prediction
+
+    This project is a **Machine Learning based web
+    application** designed to predict energy consumption
+    at Electric Vehicle charging stations.
+
+    ### 🎯 Objective
+
+    The main objective is to provide an easy-to-use
+    system for estimating EV charging energy consumption.
+
+    ### 🛠️ Technologies Used
+
+    - Python
+    - Pandas
+    - Scikit-learn
+    - Streamlit
+    - Machine Learning
+    - GitHub
+
+    ### 🤖 Machine Learning
+
+    The application uses a regression model to estimate:
+
+    **Energy Consumed (kWh)**
+
+    based on:
+
+    - City
+    - Charger Type
+    - Vehicle Type
+    - Grid Load
+    - Station Status
+    - Date
+
+    ### 📊 Dataset
+
+    The application uses an EV charging and
+    grid-load dataset containing charging
+    station records.
+
+    ### 🌐 Web Application
+
+    This project demonstrates how a Machine Learning
+    model can be converted into an interactive
+    web application using Streamlit.
+    """)
+
+    st.divider()
 
     st.info(
-        f"Based on the selected station details, "
-        f"the predicted energy consumption is "
-        f"**{prediction:.2f} kWh**."
+        "⚡ Built as a Data Science / Machine Learning project."
     )
