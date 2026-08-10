@@ -5,32 +5,24 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
-# ==========================================
-# 1. LOAD DATASET
-# ==========================================
-
+# Load dataset
 df = pd.read_csv("EV_Charging_Grid_Load_Dataset_5000.csv")
 
 
-# ==========================================
-# 2. DATE PROCESSING
-# ==========================================
-
+# Date processing
 df["Date"] = pd.to_datetime(df["Date"])
 
 df["Year"] = df["Date"].dt.year
 df["Month"] = df["Date"].dt.month
 df["Day"] = df["Date"].dt.day
+df["DayOfYear"] = df["Date"].dt.dayofyear
 
 
-# ==========================================
-# 3. FEATURES AND TARGET
-# ==========================================
-
+# Features
 features = [
     "City",
     "Charger_Type",
@@ -39,20 +31,17 @@ features = [
     "Station_Status",
     "Year",
     "Month",
-    "Day"
+    "Day",
+    "DayOfYear"
 ]
 
 target = "Energy_Consumed_kWh"
-
 
 X = df[features]
 y = df[target]
 
 
-# ==========================================
-# 4. COLUMNS
-# ==========================================
-
+# Categorical columns
 categorical_features = [
     "City",
     "Charger_Type",
@@ -60,28 +49,24 @@ categorical_features = [
     "Station_Status"
 ]
 
+# Numerical columns
 numeric_features = [
     "Grid_Load_kW",
     "Year",
     "Month",
-    "Day"
+    "Day",
+    "DayOfYear"
 ]
 
 
-# ==========================================
-# 5. PREPROCESSING
-# ==========================================
-
+# Preprocessing
 preprocessor = ColumnTransformer(
-
     transformers=[
-
         (
             "categorical",
             OneHotEncoder(handle_unknown="ignore"),
             categorical_features
         ),
-
         (
             "numeric",
             "passthrough",
@@ -91,56 +76,36 @@ preprocessor = ColumnTransformer(
 )
 
 
-# ==========================================
-# 6. MODEL
-# ==========================================
-
-model = HistGradientBoostingRegressor(
-    max_iter=100,
-    learning_rate=0.1,
-    max_leaf_nodes=15,
-    random_state=42
+# Model
+model = RandomForestRegressor(
+    n_estimators=50,
+    max_depth=5,
+    min_samples_leaf=5,
+    random_state=42,
+    n_jobs=-1
 )
 
-# ==========================================
-# 7. PIPELINE
-# ==========================================
 
+# Pipeline
 pipeline = Pipeline(
-
     steps=[
-
-        (
-            "preprocessor",
-            preprocessor
-        ),
-
-        (
-            "model",
-            model
-        )
+        ("preprocessor", preprocessor),
+        ("model", model)
     ]
 )
 
 
-# ==========================================
-# 8. TRAIN TEST SPLIT
-# ==========================================
-
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
-
     X,
     y,
-    test_size=0.2,
+    test_size=0.20,
     random_state=42
 )
 
 
-# ==========================================
-# 9. TRAIN MODEL
-# ==========================================
-
-print("Training model...")
+# Training
+print("Training improved model...")
 
 pipeline.fit(
     X_train,
@@ -148,12 +113,11 @@ pipeline.fit(
 )
 
 
-# ==========================================
-# 10. EVALUATION
-# ==========================================
-
+# Prediction
 y_pred = pipeline.predict(X_test)
 
+
+# Evaluation
 mae = mean_absolute_error(
     y_test,
     y_pred
@@ -164,35 +128,19 @@ r2 = r2_score(
     y_pred
 )
 
-print("--------------------------------")
-print("MODEL PERFORMANCE")
-print("--------------------------------")
-
-print(
-    f"Mean Absolute Error: {mae:.2f}"
-)
-
-print(
-    f"R2 Score: {r2:.2f}"
-)
-
-
-# ==========================================
-# 11. SAVE MODEL
-# ==========================================
-
-with open(
-    "model.pkl",
-    "wb"
-) as file:
-
-    pickle.dump(
-        pipeline,
-        file
-    )
-
 
 print("--------------------------------")
+print("IMPROVED MODEL PERFORMANCE")
+print("--------------------------------")
+print(f"Mean Absolute Error: {mae:.2f}")
+print(f"R2 Score: {r2:.2f}")
+print("--------------------------------")
+
+
+# Save model
+with open("model.pkl", "wb") as file:
+    pickle.dump(pipeline, file)
+
+
 print("Model saved successfully!")
 print("File: model.pkl")
-print("--------------------------------")
