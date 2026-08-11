@@ -6,42 +6,58 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
-# Load dataset
-df = pd.read_csv("EV_Charging_Grid_Load_Dataset_5000.csv")
+# ==================================================
+# LOAD DATASET
+# ==================================================
+
+print("Loading dataset...")
+
+df = pd.read_csv("EV_Charging_Grid_Load_Dataset_Improved.csv")
+
+print("Dataset loaded successfully!")
+print("Shape:", df.shape)
 
 
-# Date processing
+# ==================================================
+# DATE PROCESSING
+# ==================================================
+
 df["Date"] = pd.to_datetime(df["Date"])
 
-df["Year"] = df["Date"].dt.year
-df["Month"] = df["Date"].dt.month
-df["Day"] = df["Date"].dt.day
-df["DayOfYear"] = df["Date"].dt.dayofyear
+df["year"] = df["Date"].dt.year
+df["month"] = df["Date"].dt.month
+df["day"] = df["Date"].dt.day
+df["day_of_year"] = df["Date"].dt.dayofyear
 
 
-# Features
-features = [
-    "City",
-    "Charger_Type",
-    "Vehicle_Type",
-    "Grid_Load_kW",
-    "Station_Status",
-    "Year",
-    "Month",
-    "Day",
-    "DayOfYear"
+# ==================================================
+# FEATURES AND TARGET
+# ==================================================
+
+X = df[
+    [
+        "City",
+        "Charger_Type",
+        "Vehicle_Type",
+        "Grid_Load_kW",
+        "Station_Status",
+        "year",
+        "month",
+        "day",
+        "day_of_year"
+    ]
 ]
 
-target = "Energy_Consumed_kWh"
-
-X = df[features]
-y = df[target]
+y = df["Energy_Consumed_kWh"]
 
 
-# Categorical columns
+# ==================================================
+# CATEGORICAL & NUMERICAL FEATURES
+# ==================================================
+
 categorical_features = [
     "City",
     "Charger_Type",
@@ -49,44 +65,55 @@ categorical_features = [
     "Station_Status"
 ]
 
-# Numerical columns
-numeric_features = [
+numerical_features = [
     "Grid_Load_kW",
-    "Year",
-    "Month",
-    "Day",
-    "DayOfYear"
+    "year",
+    "month",
+    "day",
+    "day_of_year"
 ]
 
 
-# Preprocessing
+# ==================================================
+# PREPROCESSING
+# ==================================================
+
 preprocessor = ColumnTransformer(
     transformers=[
         (
             "categorical",
-            OneHotEncoder(handle_unknown="ignore"),
+            OneHotEncoder(
+                handle_unknown="ignore"
+            ),
             categorical_features
         ),
         (
-            "numeric",
+            "numerical",
             "passthrough",
-            numeric_features
+            numerical_features
         )
     ]
 )
 
 
-# Model
+# ==================================================
+# RANDOM FOREST MODEL
+# ==================================================
+
 model = RandomForestRegressor(
-    n_estimators=50,
-    max_depth=5,
-    min_samples_leaf=5,
+    n_estimators=300,
+    max_depth=None,
+    min_samples_split=2,
+    min_samples_leaf=1,
     random_state=42,
     n_jobs=-1
 )
 
 
-# Pipeline
+# ==================================================
+# PIPELINE
+# ==================================================
+
 pipeline = Pipeline(
     steps=[
         ("preprocessor", preprocessor),
@@ -95,7 +122,10 @@ pipeline = Pipeline(
 )
 
 
-# Train-test split
+# ==================================================
+# TRAIN TEST SPLIT
+# ==================================================
+
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -104,8 +134,11 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 
-# Training
-print("Training improved model...")
+# ==================================================
+# TRAIN MODEL
+# ==================================================
+
+print("\nTraining Random Forest model...")
 
 pipeline.fit(
     X_train,
@@ -113,15 +146,26 @@ pipeline.fit(
 )
 
 
-# Prediction
+# ==================================================
+# PREDICTION
+# ==================================================
+
 y_pred = pipeline.predict(X_test)
 
 
-# Evaluation
+# ==================================================
+# MODEL PERFORMANCE
+# ==================================================
+
 mae = mean_absolute_error(
     y_test,
     y_pred
 )
+
+rmse = mean_squared_error(
+    y_test,
+    y_pred
+) ** 0.5
 
 r2 = r2_score(
     y_test,
@@ -129,18 +173,35 @@ r2 = r2_score(
 )
 
 
-print("--------------------------------")
-print("IMPROVED MODEL PERFORMANCE")
-print("--------------------------------")
-print(f"Mean Absolute Error: {mae:.2f}")
-print(f"R2 Score: {r2:.2f}")
-print("--------------------------------")
+print("\n====================================")
+print("RANDOM FOREST MODEL PERFORMANCE")
+print("====================================")
+
+print(f"MAE  : {mae:.2f}")
+print(f"RMSE : {rmse:.2f}")
+print(f"R²   : {r2:.4f}")
+
+print("====================================")
 
 
-# Save model
-with open("model.pkl", "wb") as file:
-    pickle.dump(pipeline, file)
+# ==================================================
+# SAVE MODEL
+# ==================================================
+
+with open(
+    "model.pkl",
+    "wb"
+) as file:
+
+    pickle.dump(
+        pipeline,
+        file
+    )
 
 
-print("Model saved successfully!")
-print("File: model.pkl")
+print("\n====================================")
+print("MODEL SAVED SUCCESSFULLY")
+print("====================================")
+print("Model: Random Forest")
+print("File : model.pkl")
+print("====================================")
