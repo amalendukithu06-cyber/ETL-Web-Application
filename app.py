@@ -15,6 +15,16 @@ st.set_page_config(
 
 
 # ============================================================
+# MODEL PERFORMANCE
+# ============================================================
+
+MODEL_NAME = "Random Forest"
+MODEL_R2 = 0.9784
+MODEL_MAE = 7.66
+MODEL_RMSE = 10.03
+
+
+# ============================================================
 # LOAD MODEL
 # ============================================================
 
@@ -83,6 +93,10 @@ if page == "🏠 Home":
 
     st.divider()
 
+    # --------------------------------------------------------
+    # PROJECT METRICS
+    # --------------------------------------------------------
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -96,19 +110,58 @@ if page == "🏠 Home":
 
         st.metric(
             "🤖 Prediction Model",
-            "Random Forest"
+            MODEL_NAME
         )
 
     with col3:
 
         st.metric(
             "📈 R² Score",
-            "0.9792"
+            f"{MODEL_R2:.4f}"
         )
 
     st.divider()
 
-    st.subheader("🚀 Key Features")
+    # --------------------------------------------------------
+    # MODEL PERFORMANCE
+    # --------------------------------------------------------
+
+    st.subheader(
+        "📈 Model Performance"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.metric(
+            "R² Score",
+            f"{MODEL_R2:.4f}"
+        )
+
+    with col2:
+
+        st.metric(
+            "MAE",
+            f"{MODEL_MAE:.2f} kWh"
+        )
+
+    with col3:
+
+        st.metric(
+            "RMSE",
+            f"{MODEL_RMSE:.2f} kWh"
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # KEY FEATURES
+    # --------------------------------------------------------
+
+    st.subheader(
+        "🚀 Key Features"
+    )
 
     col1, col2 = st.columns(2)
 
@@ -174,10 +227,14 @@ elif page == "🔮 Prediction":
     st.divider()
 
     # --------------------------------------------------------
-    # INPUTS
+    # INPUT SECTION
     # --------------------------------------------------------
 
     col1, col2 = st.columns(2)
+
+    # --------------------------------------------------------
+    # LEFT COLUMN
+    # --------------------------------------------------------
 
     with col1:
 
@@ -208,6 +265,10 @@ elif page == "🔮 Prediction":
             )
         )
 
+    # --------------------------------------------------------
+    # RIGHT COLUMN
+    # --------------------------------------------------------
+
     with col2:
 
         grid_load = st.number_input(
@@ -236,7 +297,7 @@ elif page == "🔮 Prediction":
     st.divider()
 
     # --------------------------------------------------------
-    # PREDICT BUTTON
+    # PREDICTION BUTTON
     # --------------------------------------------------------
 
     if st.button(
@@ -244,16 +305,13 @@ elif page == "🔮 Prediction":
         width="stretch"
     ):
 
+        # Convert selected date
         date_value = pd.to_datetime(
             selected_date
         )
 
         # ====================================================
-        # INPUT DATA
-        #
-        # IMPORTANT:
-        # Current model expects:
-        # Year, Month, Day, DayOfYear
+        # CREATE INPUT DATA
         # ====================================================
 
         input_data = pd.DataFrame({
@@ -308,11 +366,11 @@ elif page == "🔮 Prediction":
             # Prevent negative prediction
             prediction = max(
                 0,
-                prediction
+                float(prediction)
             )
 
             # ------------------------------------------------
-            # SUCCESS
+            # SUCCESS MESSAGE
             # ------------------------------------------------
 
             st.success(
@@ -322,7 +380,7 @@ elif page == "🔮 Prediction":
             st.divider()
 
             # ------------------------------------------------
-            # RESULT
+            # RESULT METRICS
             # ------------------------------------------------
 
             col1, col2, col3 = st.columns(3)
@@ -338,14 +396,14 @@ elif page == "🔮 Prediction":
 
                 st.metric(
                     "🤖 Model",
-                    "Random Forest"
+                    MODEL_NAME
                 )
 
             with col3:
 
                 st.metric(
                     "📈 R² Score",
-                    "0.9792"
+                    f"{MODEL_R2:.4f}"
                 )
 
             st.divider()
@@ -361,12 +419,19 @@ elif page == "🔮 Prediction":
             result_df = pd.DataFrame({
 
                 "Parameter": [
+
                     "City",
+
                     "Charger Type",
+
                     "Vehicle Type",
+
                     "Grid Load",
+
                     "Station Status",
+
                     "Date",
+
                     "Predicted Energy"
                 ],
 
@@ -409,11 +474,20 @@ elif page == "🔮 Prediction":
                 Based on the selected charging station
                 information, the estimated energy
                 consumption is:
+                """
+            )
 
-                ### ⚡ {prediction:.2f} kWh
+            st.success(
+                f"⚡ Estimated Energy Consumption: "
+                f"{prediction:.2f} kWh"
+            )
 
-                The prediction was generated using
-                the **Random Forest Regression model**.
+            st.write(
+                f"""
+                The prediction was generated using the
+                **{MODEL_NAME} Regression model**.
+
+                Model R² Score: **{MODEL_R2:.4f}**
                 """
             )
 
@@ -619,6 +693,28 @@ elif page == "📊 Visualisation":
     st.divider()
 
     # ========================================================
+    # MONTH-WISE ENERGY
+    # ========================================================
+
+    st.subheader(
+        "📅 Average Energy Consumption by Month"
+    )
+
+    month_energy = (
+        df.groupby("month")[
+            "Energy_Consumed_kWh"
+        ]
+        .mean()
+        .sort_index()
+    )
+
+    st.bar_chart(
+        month_energy
+    )
+
+    st.divider()
+
+    # ========================================================
     # ENERGY DISTRIBUTION
     # ========================================================
 
@@ -707,11 +803,13 @@ elif page == "ℹ️ About":
 
     ### 📈 Model Performance
 
-    **R² Score: 0.9792**
+    **Model: Random Forest**
 
-    **MAE: 7.51 kWh**
+    **R² Score: 0.9784**
 
-    **RMSE: 9.85 kWh**
+    **MAE: 7.66 kWh**
+
+    **RMSE: 10.03 kWh**
 
     ---
 
@@ -719,7 +817,7 @@ elif page == "ℹ️ About":
 
     The application uses an improved EV
     charging and grid-load dataset containing
-    **5,000 records**.
+    **5,000 charging station records**.
 
     ---
 
@@ -730,6 +828,39 @@ elif page == "ℹ️ About":
     into an interactive web application using
     Streamlit.
     """)
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # ABOUT MODEL
+    # --------------------------------------------------------
+
+    st.subheader(
+        "🤖 Model Information"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.metric(
+            "Model",
+            MODEL_NAME
+        )
+
+    with col2:
+
+        st.metric(
+            "R² Score",
+            f"{MODEL_R2:.4f}"
+        )
+
+    with col3:
+
+        st.metric(
+            "MAE",
+            f"{MODEL_MAE:.2f} kWh"
+        )
 
     st.divider()
 
